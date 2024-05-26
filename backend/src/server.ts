@@ -1,7 +1,12 @@
 import { config } from "./config/config";
 import app from "./app"
+import connectDB from "./db/db"; 
+ 
+const startServer = async () => {
+ 
+    // connect database 
+    await connectDB(); 
 
-const startServer = () => {
     
     const port = config.port || 4000;
  
@@ -12,3 +17,4 @@ const startServer = () => {
 }
 
 startServer();
+ 
