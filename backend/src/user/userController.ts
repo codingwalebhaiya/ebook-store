@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import createHttpError from "http-errors";
 import User from "./userModel";
-import bcrypt from "bcrypt"
+import bcrypt from "bcrypt";
+import { sign } from "jsonwebtoken";
+import { config } from "../config/config";
 
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   const { name, email, password } = req.body;
@@ -17,25 +19,27 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
   const user = await User.findOne({ email });
   if (user) {
     const error = createHttpError(401, "User already exists with this email");
-    return next(error);
+    return next(error);  
   }
 
-  // when create a user in database then first of all hashed the password via bcrypt library 
+  // when create a user in database then first of all hashed the password via bcrypt library
 
-  const hashedPassword = bcrypt.hashSync(password,10);
-  
+  const hashedPassword = bcrypt.hashSync(password, 10);
 
+  // create new user in database
+  const newUser = User.create({
+    name,
+    email,
+    password: hashedPassword,  
+  }); 
 
+  // token generated using jwt
 
+  const token = sign({ sub: (await newUser)._id }, config.jwtSecret as string, {
+    expiresIn: "7d",
+  });
 
-
-
-
-
-
-  // process
-  // response
+  res.json({ accessToken: token });
 };
 
-export { createUser };
-  
+export { createUser }; 
