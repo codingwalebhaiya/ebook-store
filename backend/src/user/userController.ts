@@ -49,12 +49,89 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
       expiresIn: "7d",
     });
 
-    res.status(201).json({accessToken: token , message: "user created successfully!"});
+    res
+      .status(201)
+      .json({ accessToken: token, message: "user created successfully!" });
   } catch (error) {
     return next(createHttpError(501, "Error while signing the jwt token"));
   }
 };
 
+const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+  const { email, password } = req.body;
 
+  if (!email || !password) {
+    const error = createHttpError(
+      400,
+      "Validation Error: Both email and password are required."
+    );
+    return next(error);
+  }
 
-export { createUser }; 
+  let user;
+  try {
+    user = await userModel.findOne({ email });
+
+    if (!user) {
+      return next(
+        createHttpError(
+          404,
+          "Authentication Error: No account found with this email address."
+        )
+      );
+    }
+  } catch (error) {
+    return next(
+      createHttpError(
+        500,
+        "Internal Server Error: Unable to retrieve user. Please try again later."
+      )
+    );
+  }
+
+  // compare between  user-input-password with database-stored-password
+  try {
+    const isMatch = bcrypt.compareSync(password, user.password);
+
+    if (!isMatch) {
+      return next(
+        createHttpError(
+          401,
+          "Authentication Error: Incorrect password. Please try again."
+        )
+      );
+    }
+  } catch (error) {
+    return next(
+      createHttpError(
+        500,
+        "Internal Server Error: Password verification failed. Please try again later."
+      )
+    );
+  }
+
+  // if user-input-password matched with database-stored-password then create new access-token via jwt
+  try {
+    const token = sign({ sub: user._id }, config.jwtSecret as string, {
+      expiresIn: "7d",
+      algorithm: "HS256",
+    });
+
+    res
+      .status(200)
+      .json({
+        accessToken: token,
+        message: "Success: User logged in successfully.",
+      });
+  } catch (error) {
+    return next(
+      createHttpError(
+        500,
+        "Internal Server Error: Failed to generate access token. Please try again later."
+      )
+    ); 
+  }
+};
+
+export { createUser, loginUser };
+ 
