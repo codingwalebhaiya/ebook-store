@@ -23,6 +23,7 @@
     "@types/http-errors": "^2.0.4",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/mongoose": "^5.11.97",
+    "@types/multer": "^1.4.12",
     "@types/node": "^20.12.12",
     "eslint": "^9.3.0",
     "globals": "^15.3.0",
@@ -37,6 +38,7 @@
     "express": "^4.19.2",
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.4.0"
+    "mongoose": "^8.4.0",
+    "multer": "^1.4.5-lts.1"
   }
 }
