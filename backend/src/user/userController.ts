@@ -1,9 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import createHttpError from "http-errors";
-import User from "./userModel";
+import userModel from "./userModel";
 import bcrypt from "bcrypt";
 import { sign } from "jsonwebtoken";
 import { config } from "../config/config";
+import { User } from "./userTypes";
 
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   const { name, email, password } = req.body;
@@ -16,30 +17,42 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
   }
 
   // database call- user exist or not .
-  const user = await User.findOne({ email });
-  if (user) {
-    const error = createHttpError(401, "User already exists with this email");
-    return next(error);  
+
+  try {
+    const user = await userModel.findOne({ email });
+    if (user) {
+      const error = createHttpError(401, "User already exists with this email");
+      return next(error);
+    }
+  } catch (error) {
+    return next(createHttpError(500, "Error while getting user"));
   }
 
   // when create a user in database then first of all hashed the password via bcrypt library
 
   const hashedPassword = bcrypt.hashSync(password, 10);
+  let newUser: User;
+  try {
+    // create new user in database
+    newUser = await userModel.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+  } catch (error) {
+    return next(createHttpError(500, "Error while creating user"));
+  }
 
-  // create new user in database
-  const newUser = User.create({
-    name,
-    email,
-    password: hashedPassword,  
-  }); 
+  try {
+    // token generated using jwt
+    const token = sign({ sub: newUser._id }, config.jwtSecret as string, {
+      expiresIn: "7d",
+    });
 
-  // token generated using jwt
-
-  const token = sign({ sub: (await newUser)._id }, config.jwtSecret as string, {
-    expiresIn: "7d",
-  });
-
-  res.json({ accessToken: token });
+    res.json({ accessToken: token });
+  } catch (error) {
+    return next(createHttpError(501, "Error while signing the jwt token"));
+  }
 };
 
-export { createUser }; 
+export { createUser };
